@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel</title>
+</head>
+<body>
+  <h2>Etkinlik Ekle</h2>
+  
+  <form action="/etkinlik-ekle" method="POST" enctype="multipart/form-data">
+  <input type="text" name="baslik" placeholder="Etkinlik Başlığı" required><br>
+  <textarea name="aciklama" placeholder="Açıklama"></textarea><br>
+  <input type="date" name="tarih" required><br>
+
+  
+  <select name="kategori" required>
+    <option value="">Kategori Seçin</option>
+    <option value="tiyatro">Tiyatro</option>
+    <option value="konser">Konser</option>
+    <option value="sergi">Sergi</option>
+    <option value="film">Film</option>
+    <option value="spor">Spor</option>
+    <option value="diğer">Diğer</option>
+  </select><br>
+
+  <input type="number" name="fiyat" placeholder="Fiyat (₺)" required><br>
+
+  <input type="file" name="resim" accept="image/*" required><br>
+  <button type="submit">Ekle</button>
+</form>
+
+  <h2>Etkinlik Listesi</h2>
+
+<div id="liste"></div>
+
+<script>
+  fetch('/etkinlikler')
+    .then(res => res.json())
+    .then(data => {
+      const liste = document.getElementById('liste');
+      liste.innerHTML = data.map(e => `
+        <div style="margin-bottom:20px; border:1px solid #ddd; padding:10px; border-radius:6px;">
+          <img src="${e.resimYolu}" width="150"><br><br>
+          <strong>${e.baslik}</strong><br>
+          <em>${new Date(e.tarih).toLocaleDateString()}</em><br>
+          <p>${e.aciklama}</p>
+          <p><strong>Kategori:</strong> ${e.kategori || 'Belirtilmemiş'}</p>
+          <p><strong>Fiyat:</strong> ${e.fiyat ? e.fiyat + ' ₺' : 'Belirtilmemiş'}</p>
+
+          <!-- Güncelleme Formu -->
+          <form action="/etkinlik-guncelle" method="POST" style="margin-top:10px;">
+            <input type="hidden" name="id" value="${e._id}">
+            <input type="text" name="baslik" value="${e.baslik}" required><br>
+            <textarea name="aciklama" rows="2">${e.aciklama}</textarea><br>
+            <input type="date" name="tarih" value="${new Date(e.tarih).toISOString().split('T')[0]}" required><br>
+            <input type="text" name="kategori" value="${e.kategori || ''}" required><br>
+            <input type="number" name="fiyat" value="${e.fiyat || 0}" required><br>
+            <button type="submit">Güncelle</button>
+          </form>
+
+          <!-- Silme Butonu -->
+          <form action="/etkinlik-sil" method="POST" style="display:inline; margin-top:10px;">
+            <input type="hidden" name="id" value="${e._id}">
+            <button type="submit">Sil</button>
+          </form>
+        </div>
+      `).join('');
+    });
+</script>
+
+
+
+</body>
+</html>

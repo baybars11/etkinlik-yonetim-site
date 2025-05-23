@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Etkinlikler</title>
+  <link rel="stylesheet" href="css/etkinlik.css" >
+</head>
+<body>
+
+  <!-- Hava Durumu Alanı -->
+  <label for="sehirSec">Hava durumunu görmek için şehir Seçin:</label>
+  <select id="sehirSec" onchange="havaDurumuSehirle(this.value)">
+    <option value="">Şehir Seçin</option>
+    <option value="Istanbul">İstanbul</option>
+    <option value="Ankara">Ankara</option>
+    <option value="Izmir">İzmir</option>
+    <option value="Bursa">Bursa</option>
+    <option value="Antalya">Antalya</option>
+    <option value="Erzurum">Erzurum</option>
+    <option value="Giresun">Giresun</option>
+    <option value="Adana">Adana</option>
+  </select>
+  <div id="havaDurumu" style="margin: 10px 0; font-weight: bold;"></div>
+
+  <header>
+    <div class="kontroller">
+      <label for="filtre">Filtrele:</label>
+      <select id="filtre" onchange="filtrele()">
+        <option value="hepsi">Hepsi</option>
+        <option value="tiyatro">Tiyatro</option>
+        <option value="konser">Konser</option>
+        <option value="sergi">Sergi</option>
+        <option value="film">Film</option>
+        <option value="spor">Spor</option>
+        <option value="diğer">Diğer</option>
+      </select>
+
+      <label for="tarih">Tarih:</label>
+      <input type="date" id="tarih" onchange="filtrele()" />
+    </div>
+  </header>
+
+  <div class="sepet-gosterge" onclick="sepeteGit()">
+    🛒 Sepet <span id="sepetAdet">0</span>
+  </div>
+
+  <div id="etkinlikListesi"></div>
+
+  <script>
+    const apiKey = "9cea8a768d5442b083c8328d54a09b95"; // kendi key'inle değiştir
+
+    
+   function havaDurumuSehirle(sehir) {
+  if (!sehir) {
+    document.getElementById("havaDurumu").textContent = "Lütfen şehir seçin.";
+    return;
+  }
+
+  fetch(`https://api.openweathermap.org/data/2.5/weather?q=${sehir}&appid=68ec0665a055597dc77530b3fceb638d&units=metric&lang=tr`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.cod !== 200) {
+        document.getElementById('havaDurumu').textContent = `⚠️ Hata: ${data.message}`;
+        return;
+      }
+
+      const sicaklik = Math.round(data.main.temp);
+      const durum = data.weather[0].description.toLowerCase();
+
+      let yorum = "";
+      if (durum.includes("yağmur") || durum.includes("fırtına")) {
+        yorum = " Uyarı: Bugün hava yağışlı olabilir, açık hava etkinlikleri etkilenebilir.";
+      } else if (durum.includes("açık") || durum.includes("güneşli") || durum.includes("parçalı")) {
+        yorum = " Hava etkinlikler için uygun görünüyor.";
+      } else {
+        yorum = " Hava durumu kararsız, lütfen dikkatli olun.";
+      }
+
+      document.getElementById('havaDurumu').textContent = `${sehir}: ${sicaklik}°C, ${durum} — ${yorum}`;
+    })
+    .catch(() => {
+      document.getElementById('havaDurumu').textContent = 'Hava durumu alınamadı.';
+    });
+}
+
+
+    let etkinlikler = [];
+
+    function etkinlikleriGoster(liste) {
+      const alan = document.getElementById("etkinlikListesi");
+      alan.innerHTML = "";
+
+      liste.forEach(e => {
+        const div = document.createElement("div");
+        div.className = "etkinlik";
+        div.innerHTML = `
+          <img src="${e.resimYolu}" alt="${e.baslik}" />
+          <h3>${e.baslik}</h3>
+          <p>${e.aciklama}</p>
+          <p><strong>Fiyat:</strong> ${e.fiyat} ₺</p>
+          <p><strong>Kategori:</strong> ${e.kategori}</p>
+          <small>Tarih: ${new Date(e.tarih).toLocaleDateString()}</small><br>
+          <button class="sepete-ekle" onclick="sepeteEkle('${e.baslik}')">Sepete Ekle</button>
+        `;
+        alan.appendChild(div);
+      });
+    }
+
+    function filtrele() {
+  const kategoriSecim = document.getElementById("filtre").value;
+  const tarihSecim = document.getElementById("tarih").value;
+
+  const filtrelenmis = etkinlikler.filter(e => {
+    const uygunKategori = kategoriSecim === "hepsi" || e.kategori === kategoriSecim;
+    
+    const uygunTarih = !tarihSecim || new Date(e.tarih).toISOString().split('T')[0] === tarihSecim;
+    
+    return uygunKategori && uygunTarih;
+  });
+
+  etkinlikleriGoster(filtrelenmis);
+}
+
+
+    function sepeteEkle(ad) {
+      let sepet = JSON.parse(localStorage.getItem("sepet")) || [];
+      sepet.push(ad);
+      localStorage.setItem("sepet", JSON.stringify(sepet));
+      sepetSayacGuncelle();
+    }
+
+    function sepetSayacGuncelle() {
+      const sepet = JSON.parse(localStorage.getItem("sepet")) || [];
+      document.getElementById("sepetAdet").textContent = sepet.length;
+    }
+
+    function sepeteGit() {
+      window.location.href = "sepet.html";
+    }
+
+    window.onload = () => {
+      fetch('/etkinlikler')
+        .then(res => res.json())
+        .then(data => {
+          etkinlikler = data;
+          etkinlikleriGoster(etkinlikler);
+          sepetSayacGuncelle();
+        })
+        .catch(err => {
+          document.getElementById("etkinlikListesi").innerHTML = "Etkinlikler yüklenemedi.";
+          console.error(err);
+        });
+    };
+  </script>
+
+</body>
+</html>

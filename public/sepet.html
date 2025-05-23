@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sepet</title>
+  <link rel="stylesheet" href="css/sepet.css">
+</head>
+<body>
+
+  <!-- Geri Dön Butonu -->
+  <div style="position: absolute; top: 10px; left: 10px;">
+    <a href="etkinlik.html" style="text-decoration: none; background: #007bff; color: white; padding: 8px 12px; border-radius: 5px; font-size: 14px;">← Etkinliklere Geri Dön</a>
+  </div>
+
+  <h1 style="margin-top: 50px;">Sepetiniz</h1>
+
+  <div id="sepetAlani"></div>
+  <h3 id="toplamFiyat"></h3>
+
+  <button id="onaylaBtn" onclick="odemeAc()">Sepeti Onayla</button>
+
+  <!-- Ödeme Modalı -->
+  <div id="odemeModal" style="display:none">
+    <div class="modal-icerik">
+      <h2>Ödeme Bilgileri</h2>
+      <input type="text" id="kartSahibi" placeholder="Kart Sahibi Adı" required />
+      <input type="text" id="kartNumarasi" placeholder="Kart Numarası" required />
+      <input type="text" id="sonKullanma" placeholder="Son Kullanma Tarihi (AA/YY)" required />
+      <input type="text" id="cvv" placeholder="CVV" required />
+      <button onclick="odemeTamamla()">Ödemeyi Tamamla</button>
+      <button onclick="odemeKapat()" style="margin-top: 10px;">İptal</button>
+    </div>
+  </div>
+
+  <script>
+    let sepet = JSON.parse(localStorage.getItem('sepet')) || [];
+    let etkinlikVerileri = [];
+
+    function sepetiGoster() {
+      const alan = document.getElementById("sepetAlani");
+      const toplamFiyatYaz = document.getElementById("toplamFiyat");
+      alan.innerHTML = "";
+      let toplam = 0;
+
+      if (sepet.length === 0) {
+        alan.innerHTML = "<p>Sepetiniz boş.</p>";
+        toplamFiyatYaz.innerHTML = "";
+        document.getElementById("onaylaBtn").style.display = "none";
+        return;
+      }
+
+      const adetMap = {};
+      sepet.forEach(ad => {
+        adetMap[ad] = (adetMap[ad] || 0) + 1;
+      });
+
+      Object.keys(adetMap).forEach((etkinlikAdi, index) => {
+        const etkinlik = etkinlikVerileri.find(e => e.baslik === etkinlikAdi);
+        const fiyat = etkinlik ? etkinlik.fiyat : 0;
+        const adet = adetMap[etkinlikAdi];
+        const araToplam = fiyat * adet;
+        toplam += araToplam;
+
+        const div = document.createElement("div");
+        div.className = "etkinlik";
+        div.innerHTML = `
+          <span>${etkinlikAdi} - ${adet} adet × ${fiyat} ₺ = <strong>${araToplam} ₺</strong></span>
+          <button onclick="etkinlikKaldir('${etkinlikAdi}')">Kaldır</button>
+        `;
+        alan.appendChild(div);
+      });
+
+      toplamFiyatYaz.innerHTML = `<strong>Toplam Fiyat:</strong> ${toplam} ₺`;
+      document.getElementById("onaylaBtn").style.display = "block";
+    }
+
+    function etkinlikKaldir(ad) {
+      const index = sepet.indexOf(ad);
+      if (index !== -1) {
+        sepet.splice(index, 1);
+        localStorage.setItem('sepet', JSON.stringify(sepet));
+        sepetiGoster();
+      }
+    }
+
+    function odemeAc() {
+      document.getElementById("odemeModal").style.display = "block";
+    }
+
+    function odemeKapat() {
+      document.getElementById("odemeModal").style.display = "none";
+    }
+
+    function odemeTamamla() {
+      const kartSahibi = document.getElementById("kartSahibi").value.trim();
+      const kartNumarasi = document.getElementById("kartNumarasi").value.trim();
+      const sonKullanma = document.getElementById("sonKullanma").value.trim();
+      const cvv = document.getElementById("cvv").value.trim();
+
+      if (!kartSahibi || !kartNumarasi || !sonKullanma || !cvv) {
+        alert("Lütfen tüm ödeme bilgilerini eksiksiz doldurun.");
+        return;
+      }
+
+      alert("Ödemeniz başarıyla tamamlandı!");
+      localStorage.removeItem('sepet');
+      window.location.href = "etkinlik.html";
+    }
+
+    window.onload = () => {
+      fetch('/etkinlikler')
+        .then(res => res.json())
+        .then(data => {
+          etkinlikVerileri = data;
+          sepetiGoster();
+        });
+    };
+  </script>
+
+</body>
+</html>
